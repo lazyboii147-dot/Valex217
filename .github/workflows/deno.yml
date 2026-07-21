@@ -1,0 +1,40 @@
+name: Deno Secure CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+# Globally restrict the GITHUB_TOKEN
+permissions:
+  contents: read
+
+jobs:
+  audit-and-test:
+    name: Lint, Format, and Test
+    runs-on: windows-latest
+    # Mitigate hanging execution and cryptojacking risks on PRs
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        # Pinned to a specific commit SHA for supply chain hardening (v4.2.1)
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871
+
+      - name: Setup Deno
+        # Pinned to specific commit SHA
+        uses: denoland/setup-deno@61fe2df320078202e33d7d5ad347e7dcfa0e8f31
+        with:
+          deno-version: v1.x
+
+      - name: Verify formatting
+        run: deno fmt --check
+
+      - name: Run linter
+        run: deno lint
+
+      - name: Run tests (Strict Sandbox)
+        # Explicitly scope runtime permissions rather than using -A
+        # Adjust --allow-read and --allow-env paths as needed for the project
+        run: deno test --allow-read=./ --allow-env=DENO_ENV
